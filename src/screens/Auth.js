@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import * as Google from 'expo-auth-session/providers/google';
+import * as Facebook from 'expo-auth-session/providers/facebook';
+
 import Field from '../components/Field';
 import Logo from '../components/Logo';
 import SocialButtons from '../components/SocialButtons';
@@ -20,10 +23,39 @@ export default function Auth() {
   const [wrongPw, setWrongPw] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // --- GOOGLE AUTHENTICATION SETUP ---
+  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
+    expoClientId: 'YOUR_EXPO_CLIENT_ID.apps.googleusercontent.com',
+    iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
+    androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
+    webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+  });
+
+  // --- FACEBOOK AUTHENTICATION SETUP ---
+  const [fbRequest, fbResponse, promptFbAsync] = Facebook.useAuthRequest({
+    clientId: 'YOUR_FACEBOOK_APP_ID',
+  });
+
   const enter = (user) => {
     dispatch({ type: 'login', user });
     nav.reset(state.courseId ? 'home' : 'choose');
   };
+
+  // Handle Google Response
+  useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      const { authentication } = googleResponse;
+      enter({ name: 'Google User', email: 'user@google.com', token: authentication.accessToken });
+    }
+  }, [googleResponse]);
+
+  // Handle Facebook Response
+  useEffect(() => {
+    if (fbResponse?.type === 'success') {
+      const { authentication } = fbResponse;
+      enter({ name: 'Facebook User', email: 'user@facebook.com', token: authentication.accessToken });
+    }
+  }, [fbResponse]);
 
   const submit = async () => {
     if (busy) return;
@@ -45,7 +77,6 @@ export default function Auth() {
       setErrors({ password: 'Wrong password. Tap “Forgot Password?” to reset it.' });
     }
   };
-
 
   return (
     <Screen bg="#fff">
@@ -94,7 +125,11 @@ export default function Auth() {
             <View style={{ flex: 1, height: 1, backgroundColor: '#CBD5E1' }} />
           </View>
 
-          <SocialButtons onDemoLogin={enter} />
+          <SocialButtons 
+            onDemoLogin={enter}
+            onGoogleLogin={() => promptGoogleAsync()} 
+            onFacebookLogin={() => promptFbAsync()} 
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
